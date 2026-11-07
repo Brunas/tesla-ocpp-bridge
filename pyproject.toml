@@ -1,0 +1,18 @@
+# Dev tooling only. The runtime image is built from addon/ (see addon/Dockerfile).
+[project]
+name = "tesla-ocpp-bridge"
+version = "0.1.0"
+description = "Tesla Wall Connector Gen 3 to OCPP 1.6J bridge"
+requires-python = ">=3.12"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["addon/app", "tests"]
+addopts = "-ra"
+
+[tool.ruff]
+line-length = 100
+src = ["addon/app", "tests", "tools"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]

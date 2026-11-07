@@ -1,0 +1,41 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Bridge -> fake CSMS + fake TWC",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "tesla_ocpp_bridge",
+      "cwd": "${workspaceFolder}/addon/app",
+      "env": {
+        "OCPP_URL": "ws://127.0.0.1:9000",
+        "CHARGE_POINT_ID": "SIM-CP-0001",
+        "OCPP_PASSWORD": "",
+        "TWC_HOST": "127.0.0.1:8081",
+        "POLL_INTERVAL": "1",
+        "METER_VALUE_INTERVAL": "10",
+        "STATE_FILE": "${workspaceFolder}/.data/state.json",
+        "OPTIONS_FILE": "/nonexistent",
+        "LOG_LEVEL": "debug"
+      }
+    },
+    {
+      // Real backend and charger: settings come from .env (see .env.example).
+      "name": "Bridge -> CircleLink + real TWC",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "tesla_ocpp_bridge",
+      "cwd": "${workspaceFolder}/addon/app",
+      "envFile": "${workspaceFolder}/.env",
+      "env": {
+        "STATE_FILE": "${workspaceFolder}/.data/state-live.json",
+        "OPTIONS_FILE": "/nonexistent",
+        "LOG_LEVEL": "debug"
+      }
+    },
+    { "name": "Fake TWC", "type": "debugpy", "request": "launch",
+      "program": "${workspaceFolder}/tools/fake_twc.py", "args": ["--port", "8081", "--speed", "30"] },
+    { "name": "Fake CSMS", "type": "debugpy", "request": "launch",
+      "program": "${workspaceFolder}/tools/fake_csms.py", "args": ["--port", "9000"] }
+  ]
+}

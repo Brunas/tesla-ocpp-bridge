@@ -1,0 +1,31 @@
+name: Tesla Wall Connector OCPP Bridge
+version: "0.1.0"
+slug: tesla_ocpp_bridge
+description: Reports Tesla Wall Connector Gen 3 sessions to an OCPP 1.6J backend (e.g. CircleLink)
+url: https://github.com/Brunas/tesla-ocpp-bridge
+arch:
+  - amd64
+startup: application
+boot: auto
+init: false
+# Edited on the app's Configuration tab (labels: translations/en.yaml).
+# null = required: HA won't start the app until it is filled in.
+# Optional options (ocpp_password, verify_tls) are only in the schema.
+options:
+  ocpp_url: wss://ocpp.circlelink.app
+  charge_point_id: null
+  twc_host: null
+  id_tag: TESLA
+  meter_value_interval: 60
+  poll_interval: 5
+  log_level: info
+schema:
+  ocpp_url: url
+  charge_point_id: str
+  ocpp_password: password?
+  twc_host: str
+  id_tag: str
+  meter_value_interval: int(0,3600)
+  poll_interval: int(1,60)
+  verify_tls: bool?
+  log_level: list(debug|info|warning|error)

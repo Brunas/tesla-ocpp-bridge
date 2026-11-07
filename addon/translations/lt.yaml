@@ -1,0 +1,35 @@
+# Configuration tab labels in Lithuanian. Keys match the schema in config.yaml.
+configuration:
+  ocpp_url:
+    name: OCPP serverio adresas
+    description: >-
+      OCPP 1.6J serverio WebSocket adresas be įkroviklio ID.
+      CircleLink: wss://ocpp.circlelink.app
+  charge_point_id:
+    name: Įkroviklio ID
+    description: Įkroviklio ID iš CircleLink mobiliosios programėlės. Jis pridedamas prie serverio adreso.
+  ocpp_password:
+    name: OCPP slaptažodis
+    description: Pildykite tik tada, jei serveris jums suteikė slaptažodį (HTTP Basic autentifikavimas).
+  twc_host:
+    name: Wall Connector adresas
+    description: >-
+      Wall Connector IP adresas arba tinklo vardas vietiniame tinkle.
+      Rezervuokite jam DHCP adresą, kad jis nesikeistų.
+  id_tag:
+    name: ID žymė
+    description: Žymė (idTag), siunčiama su kiekviena įkrovimo sesija.
+  meter_value_interval:
+    name: Skaitiklio rodmenų intervalas
+    description: >-
+      Sekundės tarp skaitiklio rodmenų sesijos metu (0 = išjungta).
+      Serveris gali šią reikšmę pakeisti.
+  poll_interval:
+    name: Apklausos intervalas
+    description: Sekundės tarp Wall Connector apklausų.
+  verify_tls:
+    name: Tikrinti TLS sertifikatą
+    description: Išjunkite tik tada, jei serverio sertifikatas netinkamas.
+  log_level:
+    name: Žurnalo lygis
+    description: Kiek išsamiai rašyti į programėlės žurnalą. „debug“ taip pat įrašo neapdorotus OCPP pranešimus.

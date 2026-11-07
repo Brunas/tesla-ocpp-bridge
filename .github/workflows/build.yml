@@ -1,0 +1,127 @@
+name: Build
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+  workflow_dispatch:
+  schedule:
+    # Weekly rebuild, so :latest picks up python:3.14-alpine security patches
+    # even when nothing is pushed.
+    - cron: "23 4 * * 1"
+
+# Read-only by default; jobs that publish ask for more.
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Tests (Python ${{ matrix.python }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.12", "3.13", "3.14"]
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python }}
+          cache: pip
+          cache-dependency-path: |
+            requirements-dev.txt
+            addon/requirements.txt
+      - run: pip install -r requirements-dev.txt
+      - run: ruff check .
+      - run: python -m pytest
+
+  smoke:
+    name: Container smoke test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/build-push-action@v6
+        with:
+          context: addon
+          load: true
+          tags: tesla-ocpp-bridge:smoke
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      - run: tools/smoke_test.sh tesla-ocpp-bridge:smoke
+
+  image:
+    name: Docker image
+    needs: [test, smoke]
+    # PRs stop at the smoke test: no push.
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v5
+      - name: Tag matches app version
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          version=$(sed -nE 's/^version: *"?([^"]+)"?/\1/p' addon/config.yaml)
+          if [ "v$version" != "$GITHUB_REF_NAME" ]; then
+            echo "::error::tag $GITHUB_REF_NAME does not match config.yaml version $version"
+            exit 1
+          fi
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository_owner }}/tesla-ocpp-bridge
+          tags: |
+            type=ref,event=branch
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=sha,format=short
+            type=raw,value=latest,enable={{is_default_branch}}
+      - uses: docker/build-push-action@v6
+        with:
+          context: addon
+          platforms: linux/amd64
+          pull: true # always the newest base image (matters for the weekly rebuild)
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          # Same cache as the smoke job, so this mostly reuses its layers.
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # GHCR retention: every push to main adds a sha-* image plus untagged
+  # manifests (image index, attestation). Keep releases (1.2.3 / 1.2), latest and main
+  # forever, the 10 newest other tagged builds, and drop everything else.
+  prune:
+    name: Prune old images
+    needs: [image]
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+    concurrency:
+      group: ghcr-prune
+    steps:
+      - uses: dataaxiom/ghcr-cleanup-action@v1
+        with:
+          package: tesla-ocpp-bridge
+          exclude-tags: latest,main,*.*
+          keep-n-tagged: 10
+          delete-untagged: true
+          delete-ghost-images: true
+          delete-partial-images: true
+          # Grace period: a release pushes main and a v* tag back to back, and
+          # one run's prune must not eat manifests the other is still pushing.
+          older-than: 1 day

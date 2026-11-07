@@ -1,0 +1,15 @@
+# Standalone deployment (TrueNAS SCALE custom app, or any Docker host).
+# On Home Assistant OS, use the app instead (see README).
+#
+#   cp .env.example .env    # then set CHARGE_POINT_ID and TWC_HOST in .env
+#   docker compose up -d
+services:
+  tesla-ocpp-bridge:
+    # Published by .github/workflows/build.yml (amd64 only); change owner if forked.
+    image: ghcr.io/brunas/tesla-ocpp-bridge:latest
+    build: ./addon # used by `docker compose up --build` or if the pull fails
+    container_name: tesla-ocpp-bridge
+    restart: unless-stopped
+    env_file: .env # your settings (git-ignored); template: .env.example
+    volumes:
+      - ./data:/data

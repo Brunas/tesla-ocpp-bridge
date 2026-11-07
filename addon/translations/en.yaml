@@ -1,0 +1,35 @@
+# Labels for the app's Configuration tab. Keys match the schema in config.yaml.
+configuration:
+  ocpp_url:
+    name: OCPP server URL
+    description: >-
+      WebSocket URL of the OCPP 1.6J backend, without the charger ID.
+      CircleLink: wss://ocpp.circlelink.app
+  charge_point_id:
+    name: Charger ID
+    description: The charger ID from the CircleLink app. It is appended to the server URL.
+  ocpp_password:
+    name: OCPP password
+    description: Only if the backend gave you a password (HTTP Basic auth).
+  twc_host:
+    name: Wall Connector address
+    description: >-
+      IP address or hostname of the Wall Connector on your LAN.
+      Give it a DHCP reservation so it does not change.
+  id_tag:
+    name: ID tag
+    description: Tag reported for every charging session.
+  meter_value_interval:
+    name: Meter value interval
+    description: >-
+      Seconds between meter readings during a session (0 = off).
+      The backend may change it.
+  poll_interval:
+    name: Poll interval
+    description: Seconds between Wall Connector polls.
+  verify_tls:
+    name: Verify TLS certificate
+    description: Turn off only if the backend has a broken certificate.
+  log_level:
+    name: Log level
+    description: How much detail to write to the app log. "debug" also logs raw OCPP frames.
