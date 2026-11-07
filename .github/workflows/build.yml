@@ -22,7 +22,7 @@ concurrency:
 jobs:
   test:
     name: Tests (Python ${{ matrix.python }})
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     strategy:
       fail-fast: false
       matrix:
@@ -42,7 +42,7 @@ jobs:
 
   smoke:
     name: Container smoke test
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     steps:
       - uses: actions/checkout@v7
       - uses: docker/setup-buildx-action@v4
@@ -53,14 +53,33 @@ jobs:
           tags: tesla-ocpp-bridge:smoke
           cache-from: type=gha
           cache-to: type=gha,mode=max
-      - run: tools/smoke_test.sh tesla-ocpp-bridge:smoke
+      # The bridge runs under the app's AppArmor profile, as on Home Assistant.
+      - name: Load the app's AppArmor profile
+        run: |
+          sudo apparmor_parser --replace addon/apparmor.txt
+          sudo grep '^tesla_ocpp_bridge (enforce)$' /sys/kernel/security/apparmor/profiles
+      - name: Smoke test (under AppArmor)
+        run: tools/smoke_test.sh tesla-ocpp-bridge:smoke
+        env:
+          SMOKE_APPARMOR: tesla_ocpp_bridge
+      - name: No AppArmor denials
+        if: ${{ !cancelled() }}
+        run: |
+          denials=$( { sudo dmesg; sudo cat /var/log/audit/audit.log 2>/dev/null; } \
+            | grep 'apparmor="DENIED"' | grep 'profile="tesla_ocpp_bridge"' || true)
+          if [ -n "$denials" ]; then
+            echo "$denials"
+            echo "::error::AppArmor blocked the bridge. Allow what it needs in addon/apparmor.txt."
+            exit 1
+          fi
+          echo "no denials"
 
   image:
     name: Docker image
     needs: [test, smoke]
     # PRs stop at the smoke test: no push.
     if: github.event_name != 'pull_request'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     permissions:
       contents: read
       packages: write
@@ -108,7 +127,7 @@ jobs:
   prune:
     name: Prune old images
     needs: [image]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     permissions:
       packages: write
     concurrency:
