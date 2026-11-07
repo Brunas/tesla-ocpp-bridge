@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.2
+
+- The ID tag option is now labelled "CircleLink station name" on the
+  Configuration tab, in English and Lithuanian. It must exactly match the
+  station name you gave the charger in the CircleLink app. The default is
+  still `TESLA`.
+
 ## 0.1.1
 
 - The app now has its own AppArmor profile. It may only read its own code,

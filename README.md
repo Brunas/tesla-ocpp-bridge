@@ -35,7 +35,9 @@ read-only. It rejects RemoteStart/Stop and SetChargingProfile.
 2. In the CircleLink app, register the charger. It gives you the server URL
    `wss://ocpp.circlelink.app` and a charger ID. If it also shows a password,
    set `ocpp_password`. Keep the charger ID out of git: it lives only in the
-   app's Configuration tab or your local `.env`.
+   app's Configuration tab or your local `.env`. Note the **station name** you
+   give the charger there: it is the **ID tag** (`id_tag` / `ID_TAG`), and
+   it must match exactly.
 
 ## Option A: Home Assistant app (recommended)
 
@@ -48,8 +50,9 @@ Home Assistant runs as a VM (HA OS), so it can run apps (formerly called add-ons
    image from it.
 3. Settings → Apps → *Install app* → ⋮ → *Check for updates*. The app
    appears under *Local apps*.
-4. Install it, then on the *Configuration* tab fill in **Charger ID** and
-   **Wall Connector address** (required) and save. Start it and watch the
+4. Install it, then on the *Configuration* tab fill in **Charger ID**,
+   **Wall Connector address** and **ID tag** (your CircleLink station name),
+   then save. Start it and watch the
    *Log* tab.
 
 **From GitHub (one click):**
@@ -69,7 +72,7 @@ be public, because HA clones it.
 Settings live in a local `.env` file, which git ignores:
 
 ```sh
-cp .env.example .env       # then set CHARGE_POINT_ID and TWC_HOST
+cp .env.example .env       # then set CHARGE_POINT_ID, TWC_HOST and ID_TAG
 docker compose up -d --build
 docker compose logs -f
 ```
@@ -99,7 +102,7 @@ weakest option, so prefer HA or TrueNAS.
 | `CHARGE_POINT_ID` | `charge_point_id` | – (required) |
 | `OCPP_PASSWORD` | `ocpp_password` | empty |
 | `TWC_HOST` | `twc_host` | – (required) |
-| `ID_TAG` | `id_tag` | `TESLA` |
+| `ID_TAG` | `id_tag` | **required**: your CircleLink station name (`TESLA` until you change it) |
 | `METER_VALUE_INTERVAL` | `meter_value_interval` | `60` |
 | `POLL_INTERVAL` | `poll_interval` | `5` |
 | `VERIFY_TLS` | `verify_tls` | `true` |

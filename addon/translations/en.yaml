@@ -17,8 +17,10 @@ configuration:
       IP address or hostname of the Wall Connector on your LAN.
       Give it a DHCP reservation so it does not change.
   id_tag:
-    name: ID tag
-    description: Tag reported for every charging session.
+    name: ID tag (CircleLink station name)
+    description: >-
+      Required. Exactly the station name you gave the charger in the CircleLink
+      app. It is sent as the idTag of every charging session.
   meter_value_interval:
     name: Meter value interval
     description: >-

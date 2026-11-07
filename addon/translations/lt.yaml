@@ -17,8 +17,11 @@ configuration:
       Wall Connector IP adresas arba tinklo vardas vietiniame tinkle.
       Rezervuokite jam DHCP adresą, kad jis nesikeistų.
   id_tag:
-    name: ID žymė
-    description: Žymė (idTag), siunčiama su kiekviena įkrovimo sesija.
+    name: ID žymė (CircleLink stotelės pavadinimas)
+    description: >-
+      Privaloma. Tiksliai toks pat stotelės pavadinimas, kokį įkrovikliui
+      suteikėte CircleLink programėlėje. Siunčiamas kaip kiekvienos įkrovimo
+      sesijos idTag.
   meter_value_interval:
     name: Skaitiklio rodmenų intervalas
     description: >-

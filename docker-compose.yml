@@ -1,7 +1,7 @@
 # Standalone deployment (TrueNAS SCALE custom app, or any Docker host).
 # On Home Assistant OS, use the app instead (see README).
 #
-#   cp .env.example .env    # then set CHARGE_POINT_ID and TWC_HOST in .env
+#   cp .env.example .env    # then set CHARGE_POINT_ID, TWC_HOST and ID_TAG in .env
 #   docker compose up -d
 services:
   tesla-ocpp-bridge:

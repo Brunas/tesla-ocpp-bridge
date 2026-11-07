@@ -6,8 +6,9 @@ are read from the Wall Connector's local API (`http://<ip>/api/1/vitals`).
 
 ## Options
 
-Set these on the *Configuration* tab. **Charger ID** and **Wall Connector
-address** are required. The app won't start until both are filled in.
+Set these on the *Configuration* tab. **Charger ID**, **Wall Connector address**
+and **ID tag** are required. The app won't start until the first two are
+filled in, and the ID tag must match your CircleLink station name.
 
 | Option | Meaning |
 |---|---|
@@ -15,7 +16,7 @@ address** are required. The app won't start until both are filled in.
 | `charge_point_id` | **Required.** Charger ID from the CircleLink app (appended to the URL) |
 | `ocpp_password` | Only if the backend gave you a password (HTTP Basic auth) |
 | `twc_host` | **Required.** IP address of the Wall Connector (give it a DHCP reservation) |
-| `id_tag` | Tag reported for every session |
+| `id_tag` | **Required.** Exactly the station name you gave the charger in CircleLink. Reported as the idTag of every session |
 | `meter_value_interval` | Seconds between meter readings during a session (0 = off) |
 | `poll_interval` | Seconds between Wall Connector polls |
 | `verify_tls` | Set `false` only if the backend has a broken certificate |

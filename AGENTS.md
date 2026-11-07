@@ -36,6 +36,8 @@ SetChargingProfile are rejected on purpose: the API cannot control charging.
   `charge_point`, `bridge`, `__main__`).
 - Python 3.14 in the devcontainer and Docker image. CI tests 3.12–3.14.
 - Sessions follow plug-in → unplug (`vehicle_connected`), not contactor state.
+- `id_tag` keeps the default `TESLA` (not `null`/required in HA). The docs say
+  to set it to the CircleLink station name.
 
 ## Commands
 
@@ -131,7 +133,8 @@ decision.
   it would create fake sessions in the user's account.
 - To verify on the first real run:
   1. Does CircleLink require a password (`ocpp_password`)?
-  2. Is idTag `TESLA` accepted? (log line `idTag status: Accepted`)
+  2. idTag must be the CircleLink station name (confirmed by the user).
+     Check for `idTag status: Accepted`.
   3. Does the real TWC update `lifetime.energy_wh` live during a session? Also
      check the field names (`vehicle_connected`, `contactor_closed`,
      `session_energy_wh`, `voltageA_v`, `currentA_a`).
