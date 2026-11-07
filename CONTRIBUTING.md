@@ -87,6 +87,9 @@ interface uses (Lithuanian: *programėlė*).
 
 ## Pull requests
 
+Every change goes through a pull request, including the maintainer's own.
+Nobody can push to `main` directly.
+
 1. Fork the repository and create a branch from `main`.
 2. Keep each pull request to one topic, and update the docs if behaviour
    changes.

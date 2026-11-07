@@ -68,9 +68,11 @@ decision.
 
 - `main` has a GitHub ruleset. Merging a PR needs 1 approving review, green CI
   (`Tests (Python 3.12/3.13/3.14)`, `Container smoke test`) and resolved
-  conversations. Force pushes and deleting `main` are blocked. Repo admins
-  can bypass the ruleset, because GitHub doesn't let authors approve their
-  own PRs.
+  conversations. Force pushes and deleting `main` are blocked.
+- PRs are mandatory: nobody can push to `main` directly, admins included.
+  Admins can bypass the rules only when merging a PR (bypass mode
+  `pull_request`), because GitHub doesn't let authors approve their own PRs.
+  Tags are not affected, so pushing release tags still works.
 - Merged PR branches are deleted automatically (repo setting
   `delete_branch_on_merge`). Locally, `git fetch --prune` removes them.
 - `.github/CODEOWNERS` requests a review from the owner. CI job names are
