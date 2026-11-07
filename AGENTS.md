@@ -61,9 +61,21 @@ decision.
   `addon/translations/en.yaml` and `lt.yaml`. `charge_point_id` and `twc_host` default to
   `null`, which makes HA require them.
 - Elsewhere: environment variables from `.env` (template `.env.example`).
-  They override `/data/options.json`. A new option goes in `config.DEFAULTS`,
-  `config.yaml` (options + schema), `translations/*.yaml`, `.env.example`,
-  `addon/DOCS.md` and the README table.
+  They override `/data/options.json`. CONTRIBUTING.md ("Adding a
+  configuration option") lists the seven places a new option goes.
+
+## Contributing / review
+
+- `main` has a GitHub ruleset. Merging a PR needs 1 approving review, green CI
+  (`Tests (Python 3.12/3.13/3.14)`, `Container smoke test`) and resolved
+  conversations. Force pushes and deleting `main` are blocked. Repo admins
+  can bypass the ruleset, because GitHub doesn't let authors approve their
+  own PRs.
+- Merged PR branches are deleted automatically (repo setting
+  `delete_branch_on_merge`). Locally, `git fetch --prune` removes them.
+- `.github/CODEOWNERS` requests a review from the owner. CI job names are
+  required check names: if you rename a job in `build.yml`, update the ruleset
+  too.
 
 ## Invariants and gotchas
 

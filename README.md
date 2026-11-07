@@ -207,5 +207,14 @@ Dependabot (`.github/dependabot.yml`) opens weekly PRs for pip packages and
 GitHub Actions. Minor and patch updates are grouped; major ones come one at a
 time.
 
-To release: bump `version` in `addon/config.yaml`, commit, then
-`git tag v0.1.1 && git push --tags`.
+To release: bump `version` in `addon/config.yaml` in a pull request. After it
+is merged, tag that commit on `main` with `git tag v0.1.1 && git push origin v0.1.1`.
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md). Pull requests need passing CI and one
+approving review.
+
+## License
+
+[MIT](LICENSE). Not affiliated with Tesla or CircleLink.
