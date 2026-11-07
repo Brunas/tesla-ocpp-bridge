@@ -79,6 +79,26 @@ decision.
   required check names: if you rename a job in `build.yml`, update the ruleset
   too.
 
+## AppArmor and HA updates
+
+- `addon/apparmor.txt` confines the app on HA. It brings the security rating
+  from 7 to 8: 5 base, +2 for no ports or host network, +1 for a custom
+  profile. Image signing gives nothing, because Supervisor has no signing
+  support. The profile was built from an strace of a full session. CI loads
+  it on the Ubuntu runner, runs the smoke test under it and fails on any
+  `apparmor="DENIED"` line. That can't be tested on macOS, because Docker
+  Desktop has no AppArmor.
+- Supervisor rules: exactly one `profile` line. Supervisor renames it to the
+  app's full slug, so never reference the profile's own name. A new profile
+  is only loaded on install or update.
+- HA picks up changes only when `version` in `addon/config.yaml` increases.
+  It builds locally from `addon/` and doesn't use tags or GHCR. Add a section
+  to `addon/CHANGELOG.md` for every version.
+- To test a branch on HA before merging, add the repository URL with
+  `#<branch>` (Supervisor's `RE_REPOSITORY` allows letters, digits,
+  `_ - . /`). Stop the main install while testing: two bridges with the same
+  charger ID would fight over the OCPP connection.
+
 ## Invariants and gotchas
 
 - The energy register (`state.register_wh`) must never decrease. It is

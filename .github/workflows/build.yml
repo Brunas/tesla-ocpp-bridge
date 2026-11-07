@@ -53,7 +53,26 @@ jobs:
           tags: tesla-ocpp-bridge:smoke
           cache-from: type=gha
           cache-to: type=gha,mode=max
-      - run: tools/smoke_test.sh tesla-ocpp-bridge:smoke
+      # The bridge runs under the app's AppArmor profile, as on Home Assistant.
+      - name: Load the app's AppArmor profile
+        run: |
+          sudo apparmor_parser --replace addon/apparmor.txt
+          sudo grep '^tesla_ocpp_bridge (enforce)$' /sys/kernel/security/apparmor/profiles
+      - name: Smoke test (under AppArmor)
+        run: tools/smoke_test.sh tesla-ocpp-bridge:smoke
+        env:
+          SMOKE_APPARMOR: tesla_ocpp_bridge
+      - name: No AppArmor denials
+        if: ${{ !cancelled() }}
+        run: |
+          denials=$( { sudo dmesg; sudo cat /var/log/audit/audit.log 2>/dev/null; } \
+            | grep 'apparmor="DENIED"' | grep 'profile="tesla_ocpp_bridge"' || true)
+          if [ -n "$denials" ]; then
+            echo "$denials"
+            echo "::error::AppArmor blocked the bridge. Allow what it needs in addon/apparmor.txt."
+            exit 1
+          fi
+          echo "no denials"
 
   image:
     name: Docker image

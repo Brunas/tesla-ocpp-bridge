@@ -63,6 +63,11 @@ code relies on. Please read it before changing `bridge.py`.
   strictly in order. Many tests guard these two invariants. AGENTS.md
   explains why they matter.
 - Code style is whatever `ruff check .` accepts (line length 100).
+- On Home Assistant the app runs under the AppArmor profile
+  `addon/apparmor.txt`. It may only read its code, read and write `/data`,
+  and use the network. If your change needs other files, or starts another
+  program, extend the profile. CI runs the smoke test under it and fails on
+  any denial.
 
 ### Adding a configuration option
 
@@ -107,12 +112,20 @@ the same checks and review.
 
 ## Releases (maintainers)
 
-1. In a pull request, bump `version` in `addon/config.yaml` (e.g. `0.2.0`).
-2. After merging, tag that commit on `main` and push the tag:
-   `git tag v0.2.0 && git push origin v0.2.0`.
-3. CI checks that the tag matches `config.yaml` and publishes
-   `ghcr.io/brunas/tesla-ocpp-bridge:0.2.0`. Home Assistant offers the update
-   to app users.
+1. In a pull request, bump `version` in `addon/config.yaml` (e.g. `0.2.0`)
+   and add a section for it at the top of `addon/CHANGELOG.md`. Home
+   Assistant shows that section in its update dialog.
+2. Merge it. Home Assistant offers the update as soon as the new version is on
+   `main`: at its next store refresh, or right away with *Check for updates*.
+   It builds the app locally from `addon/`, so it doesn't need the tag or the
+   GHCR image.
+3. Tag the merge commit on `main` and push the tag:
+   `git tag v0.2.0 && git push origin v0.2.0`. CI checks that the tag matches
+   `config.yaml` and publishes `ghcr.io/brunas/tesla-ocpp-bridge:0.2.0` for
+   Docker users.
+
+Changes merged without a version bump never reach Home Assistant: it only
+compares versions.
 
 ## License
 

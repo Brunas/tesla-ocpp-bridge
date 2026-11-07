@@ -1,0 +1,51 @@
+# AppArmor profile for the Home Assistant app (raises its security rating
+# from 7 to 8).
+#
+# Supervisor loads this file when the app is installed or updated, and renames
+# the profile to the app's full slug. So the file must contain exactly one
+# "profile" line and must not refer to the profile's own name.
+#
+# It allows only what the bridge does, as traced with strace over a full
+# session: run Python from the image, read its code in /app, read and write
+# /data (options.json, state.json), resolve names and open TCP/UDP
+# connections. CI runs the container smoke test under this profile and fails
+# on any denial (.github/workflows/build.yml). If the bridge starts needing
+# other files, add them here.
+
+#include <tunables/global>
+
+profile tesla_ocpp_bridge flags=(attach_disconnected,mediate_deleted) {
+  #include <abstractions/base>
+
+  # Networking: Wall Connector (HTTP), OCPP backend (ws/wss), DNS.
+  network inet stream,
+  network inet6 stream,
+  network inet dgram,
+  network inet6 dgram,
+  # asyncio's internal wake-up channel (socketpair), used for signal handling.
+  network unix stream,
+
+  # Docker and Supervisor stop the app with SIGTERM, then SIGKILL.
+  signal (receive) peer=unconfined,
+
+  # Python from the image (python:3.14-alpine).
+  /usr/local/bin/python3* mrix,
+  /usr/local/lib/** mr,
+  /lib/** mr,
+  /usr/lib/** mr,
+
+  # System files read by Python, OpenSSL and the resolver.
+  /etc/hosts r,
+  /etc/resolv.conf r,
+  /etc/ssl/** r,
+  /usr/share/zoneinfo/** r,
+  @{PROC}/sys/vm/overcommit_memory r,
+
+  # The bridge's code.
+  /app/ r,
+  /app/** r,
+
+  # options.json (written by Supervisor), state.json and its temporary copy.
+  /data/ r,
+  /data/** rw,
+}

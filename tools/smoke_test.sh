@@ -3,10 +3,14 @@
 #
 # Runs fake_csms, fake_twc and the bridge as containers on a private Docker
 # network (the image already has the simulators' dependencies), then drives one
-# session: boot -> plug in + charge -> meter values -> unplug -> stop.
+# session: boot -> plug in + charge -> meter values -> unplug -> stop, and
+# checks that the bridge exits cleanly on SIGTERM.
 # Needs only Docker. Never talks to the real CircleLink or a real Wall Connector.
 #
 #   docker build -t tesla-ocpp-bridge:smoke addon && tools/smoke_test.sh
+#
+# SMOKE_APPARMOR=<profile> runs the bridge under that (already loaded) AppArmor
+# profile, as CI does with addon/apparmor.txt. Linux only.
 set -euo pipefail
 
 IMAGE=${1:-tesla-ocpp-bridge:smoke}
@@ -78,7 +82,12 @@ wait_port "$CSMS" 9000
 wait_port "$TWC" 8081
 echo "ok: simulators up"
 
-docker run -d --name "$BRIDGE" --network "$NET" \
+security=()
+if [ -n "${SMOKE_APPARMOR:-}" ]; then
+  security=(--security-opt "apparmor=$SMOKE_APPARMOR")
+fi
+# ${a[@]+...}: bash 3.2 (macOS) treats an empty array as unset under set -u.
+docker run -d --name "$BRIDGE" --network "$NET" ${security[@]+"${security[@]}"} \
   -e OCPP_URL="ws://$CSMS:9000" \
   -e CHARGE_POINT_ID=SMOKE-TEST \
   -e TWC_HOST="$TWC:8081" \
@@ -86,6 +95,11 @@ docker run -d --name "$BRIDGE" --network "$NET" \
   -e METER_VALUE_INTERVAL=2 \
   -e LOG_LEVEL=debug \
   "$IMAGE" >/dev/null
+if [ -n "${SMOKE_APPARMOR:-}" ]; then
+  profile=$(docker inspect -f '{{.AppArmorProfile}}' "$BRIDGE")
+  [ "$profile" = "$SMOKE_APPARMOR" ] || fail "bridge runs under AppArmor '$profile', not '$SMOKE_APPARMOR'"
+  echo "ok: bridge confined by AppArmor profile $profile"
+fi
 
 wait_for "$CSMS" "BootNotification" "BootNotification reached the CSMS"
 twc 'plug=1&charge=1'
@@ -95,7 +109,18 @@ wait_for "$CSMS" "MeterValues tx=[0-9]+" "MeterValues during the session"
 twc 'plug=0'
 wait_for "$CSMS" "StopTransaction" "StopTransaction on unplug"
 
+# Home Assistant and Docker stop the app with SIGTERM and wait 10 s before
+# SIGKILL. The bridge must exit cleanly; under AppArmor this also checks that
+# it may receive the signal.
+stop_start=$SECONDS
+docker stop -t 10 "$BRIDGE" >/dev/null
+exit_code=$(docker inspect -f '{{.State.ExitCode}}' "$BRIDGE")
+[ "$exit_code" = 0 ] || fail "bridge exited with $exit_code after docker stop (SIGTERM not handled?)"
+((SECONDS - stop_start < 10)) || fail "bridge took $((SECONDS - stop_start)) s to stop"
 bridge_log=$(docker logs "$BRIDGE" 2>&1)
+grep -q "Stopped" <<<"$bridge_log" || fail "no 'Stopped' in bridge log after docker stop"
+echo "ok: clean stop on SIGTERM"
+
 if grep -q Traceback <<<"$bridge_log"; then
   fail "traceback in bridge log"
 fi

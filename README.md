@@ -114,6 +114,9 @@ weakest option, so prefer HA or TrueNAS.
 tesla-ocpp-bridge/
 ├── addon/                      # Home Assistant app = Docker build context
 │   ├── config.yaml             #   app manifest (version, options schema)
+│   ├── apparmor.txt            #   AppArmor profile (CI smoke test runs under it)
+│   ├── CHANGELOG.md            #   shown in HA's update dialog
+│   ├── translations/           #   Configuration tab labels (en, lt)
 │   ├── DOCS.md                 #   shown on the app page in HA
 │   ├── Dockerfile              #   also used for TrueNAS / plain Docker
 │   ├── requirements.txt        #   runtime dependencies (pinned)
