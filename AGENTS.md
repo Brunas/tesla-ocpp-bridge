@@ -88,6 +88,12 @@ decision.
   it on the Ubuntu runner, runs the smoke test under it and fails on any
   `apparmor="DENIED"` line. That can't be tested on macOS, because Docker
   Desktop has no AppArmor.
+- Stop signals come from the container runtime. On Ubuntu 24.04+ (CI runs on
+  `ubuntu-26.04`), runc and crun have their own AppArmor profiles, so the
+  sender is `runc`, not `unconfined`. The profile therefore accepts signals
+  from `unconfined`, `runc` and `crun`, like Docker's default profile.
+  Without that, `docker stop` ends in SIGKILL (exit 137). The smoke test
+  checks for a clean stop.
 - Supervisor rules: exactly one `profile` line. Supervisor renames it to the
   app's full slug, so never reference the profile's own name. A new profile
   is only loaded on install or update.

@@ -25,8 +25,13 @@ profile tesla_ocpp_bridge flags=(attach_disconnected,mediate_deleted) {
   # asyncio's internal wake-up channel (socketpair), used for signal handling.
   network unix stream,
 
-  # Docker and Supervisor stop the app with SIGTERM, then SIGKILL.
+  # Docker and Supervisor stop the app with SIGTERM, then SIGKILL. The sender
+  # is the container runtime: unconfined on some hosts, but runc (or crun) has
+  # its own profile on others (Ubuntu 24.04+). These are the same senders
+  # Docker's default profile accepts.
   signal (receive) peer=unconfined,
+  signal (receive) peer=runc,
+  signal (receive) peer=crun,
 
   # Python from the image (python:3.14-alpine).
   /usr/local/bin/python3* mrix,
