@@ -38,8 +38,7 @@ def test_env_values_are_cast_to_default_types(env):
     assert cfg["ocpp_url"] == "wss://ocpp.circlelink.app"  # default kept
 
 
-@pytest.mark.parametrize("raw,expected", [("1", True), ("YES", True), ("on", True),
-                                          ("0", False), ("no", False)])
+@pytest.mark.parametrize("raw,expected", [("1", True), ("YES", True), ("on", True), ("0", False), ("no", False)])
 def test_bool_env_parsing(env, raw, expected):
     env.setenv("CHARGE_POINT_ID", "CP1")
     env.setenv("TWC_HOST", "h")
@@ -48,8 +47,7 @@ def test_bool_env_parsing(env, raw, expected):
 
 
 def test_home_assistant_options_file(env, tmp_path):
-    write_options(tmp_path, charge_point_id="CP1", twc_host="10.0.0.5",
-                  meter_value_interval=30, ocpp_password="")
+    write_options(tmp_path, charge_point_id="CP1", twc_host="10.0.0.5", meter_value_interval=30, ocpp_password="")
     cfg = load_config()
     assert cfg["twc_host"] == "10.0.0.5"
     assert cfg["meter_value_interval"] == 30
@@ -68,12 +66,15 @@ def test_empty_env_var_is_ignored(env, tmp_path):
     assert load_config()["twc_host"] == "10.0.0.5"
 
 
-@pytest.mark.parametrize("url,expected", [
-    ("wss://ocpp.circlelink.app", "wss://ocpp.circlelink.app/CP1"),
-    ("wss://ocpp.circlelink.app/", "wss://ocpp.circlelink.app/CP1"),
-    ("wss://ocpp.circlelink.app/CP1", "wss://ocpp.circlelink.app/CP1"),
-    ("ws://host:9000/ocpp/", "ws://host:9000/ocpp/CP1"),
-])
+@pytest.mark.parametrize(
+    "url,expected",
+    [
+        ("wss://ocpp.circlelink.app", "wss://ocpp.circlelink.app/CP1"),
+        ("wss://ocpp.circlelink.app/", "wss://ocpp.circlelink.app/CP1"),
+        ("wss://ocpp.circlelink.app/CP1", "wss://ocpp.circlelink.app/CP1"),
+        ("ws://host:9000/ocpp/", "ws://host:9000/ocpp/CP1"),
+    ],
+)
 def test_ws_url(cfg, url, expected):
     cfg.update(ocpp_url=url, charge_point_id="CP1")
     assert Bridge(cfg).ws_url() == expected
@@ -100,11 +101,14 @@ def test_ssl_context(cfg):
     assert ctx.verify_mode == ssl.CERT_NONE and not ctx.check_hostname
 
 
-@pytest.mark.parametrize("host,base", [
-    ("192.168.1.5", "http://192.168.1.5"),
-    ("twc.lan:8080", "http://twc.lan:8080"),
-    ("http://192.168.1.5/", "http://192.168.1.5"),
-    ("https://twc.lan", "https://twc.lan"),
-])
+@pytest.mark.parametrize(
+    "host,base",
+    [
+        ("192.168.1.5", "http://192.168.1.5"),
+        ("twc.lan:8080", "http://twc.lan:8080"),
+        ("http://192.168.1.5/", "http://192.168.1.5"),
+        ("https://twc.lan", "https://twc.lan"),
+    ],
+)
 def test_wall_connector_base_url(host, base):
     assert WallConnector(host, session=None).base == base

@@ -4,7 +4,7 @@
 
 ## How it was tested
 
-- [ ] `python -m pytest` and `ruff check .` pass locally
+- [ ] `python -m pytest`, `black --check .` and `ruff check .` pass locally
 - [ ] `tools/smoke_test.sh` passes (if the image, configuration or startup changed)
 - [ ] Tried on real hardware or a real backend: <!-- which Wall Connector firmware / backend? or "no" -->
 

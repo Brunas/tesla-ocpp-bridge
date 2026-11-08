@@ -25,16 +25,19 @@ DEFAULT_RESPONSES = {
 }
 
 
-def vitals(plugged=False, charging=False, session_wh=0.0, amps=None,
-           volts=(230.0, 230.0, 230.0), alerts=()):
+def vitals(plugged=False, charging=False, session_wh=0.0, amps=None, volts=(230.0, 230.0, 230.0), alerts=()):
     if amps is None:
         amps = 16.0 if charging else 0.0
     return {
         "vehicle_connected": plugged,
         "contactor_closed": charging,
         "session_energy_wh": session_wh,
-        "voltageA_v": volts[0], "voltageB_v": volts[1], "voltageC_v": volts[2],
-        "currentA_a": amps, "currentB_a": amps, "currentC_a": amps,
+        "voltageA_v": volts[0],
+        "voltageB_v": volts[1],
+        "voltageC_v": volts[2],
+        "currentA_a": amps,
+        "currentB_a": amps,
+        "currentC_a": amps,
         "current_alerts": list(alerts),
     }
 

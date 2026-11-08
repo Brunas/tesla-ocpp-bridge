@@ -34,8 +34,13 @@ def test_full_session_is_delivered_in_order(bridge, cfg):
 
     assert all(p["transactionId"] == 42 for p in conn.payloads("MeterValues"))
     stop = conn.payloads("StopTransaction")[0]
-    assert stop == {"meterStop": 1500, "timestamp": stop["timestamp"], "transactionId": 42,
-                    "reason": "EVDisconnected", "idTag": "TESLA"}
+    assert stop == {
+        "meterStop": 1500,
+        "timestamp": stop["timestamp"],
+        "transactionId": 42,
+        "reason": "EVDisconnected",
+        "idTag": "TESLA",
+    }
 
     assert bridge.state.outbox == [] and bridge.state.tx_ids == {}
     assert State(cfg["state_file"]).outbox == []  # delivery persisted
@@ -96,8 +101,7 @@ def test_retry_after_reconnect_delivers_everything(bridge):
 def test_not_accepted_id_tag_is_logged_but_tracked(bridge, caplog):
     async def scenario():
         charge_session(bridge, end=False)
-        cp, _ = attach(bridge, StartTransaction={"transactionId": 9,
-                                                 "idTagInfo": {"status": "Invalid"}})
+        cp, _ = attach(bridge, StartTransaction={"transactionId": 9, "idTagInfo": {"status": "Invalid"}})
         await drain(bridge, cp)
 
     with caplog.at_level(logging.WARNING):
@@ -171,8 +175,9 @@ def test_boot_interval_does_not_override_csms_configuration(bridge):
 
 def test_boot_pending_reports_failure_and_retry_interval(bridge):
     async def scenario():
-        cp, _ = attach(bridge, BootNotification={"currentTime": "2026-01-01T00:00:00Z",
-                                                 "interval": 17, "status": "Pending"})
+        cp, _ = attach(
+            bridge, BootNotification={"currentTime": "2026-01-01T00:00:00Z", "interval": 17, "status": "Pending"}
+        )
         return await bridge.send_boot(cp)
 
     assert asyncio.run(scenario()) is False
@@ -191,8 +196,7 @@ def test_boot_pending_then_triggered_boot_accepted_does_not_boot_again(bridge):
         cp, conn = attach(bridge, BootNotification=boot_reply)
         task = asyncio.create_task(bridge.boot(cp))
         await wait_until(lambda: len(conn.payloads("BootNotification")) == 1)
-        reply = await incoming(cp, conn, "TriggerMessage",
-                               {"requestedMessage": "BootNotification"})
+        reply = await incoming(cp, conn, "TriggerMessage", {"requestedMessage": "BootNotification"})
         assert reply[2] == {"status": "Accepted"}
         await asyncio.wait_for(task, timeout=2)  # does not sit out the 15 s retry interval
         return conn
@@ -213,7 +217,8 @@ def test_triggered_meter_values_with_and_without_transaction(bridge):
         return conn
 
     conn = asyncio.run(scenario())
-    triggered = [p for p in conn.payloads("MeterValues")
-                 if p["meterValue"][0]["sampledValue"][0]["context"] == "Trigger"]
+    triggered = [
+        p for p in conn.payloads("MeterValues") if p["meterValue"][0]["sampledValue"][0]["context"] == "Trigger"
+    ]
     assert "transactionId" not in triggered[0]
     assert triggered[1]["transactionId"] == 42

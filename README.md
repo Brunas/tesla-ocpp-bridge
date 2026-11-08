@@ -1,4 +1,17 @@
+<p align="center">
+  <img src="assets/logo.svg" alt="Wall Connector OCPP bridge logo" width="375">
+</p>
+
 # Tesla Wall Connector Gen 3 → OCPP bridge
+
+[![App version][version-shield]](addon/CHANGELOG.md)
+[![CI][ci-shield]][ci]
+[![GitHub Activity][commits-shield]][commits]
+[![License][license-shield]](LICENSE)
+[![Project Maintenance][maintenance-shield]][maintainer]
+[![Code style: black][black-shield]][black]
+[![Linting: Ruff][ruff-shield]][ruff]
+[![Buy Me A Coffee][coffee-shield]][coffee]
 
 [![Add repository to my Home Assistant](https://my.home-assistant.io/badges/supervisor_add_addon_repository.svg)](https://my.home-assistant.io/redirect/supervisor_add_addon_repository/?repository_url=https%3A%2F%2Fgithub.com%2FBrunas%2Ftesla-ocpp-bridge)
 
@@ -34,6 +47,24 @@ after an internet outage or a restart, so sessions are not lost.
 
 The bridge does **not** control the charger, because the Wall Connector API is
 read-only. It rejects RemoteStart/Stop and SetChargingProfile.
+
+## Other chargers
+
+Only the Tesla Wall Connector Gen 3 has been tested. The bridge may also work
+with other chargers, such as the Tesla Universal Wall Connector, if they are
+on your local network and answer the same local HTTP API without a login:
+
+| Endpoint | Fields the bridge reads |
+|---|---|
+| `/api/1/vitals` | `vehicle_connected`, `contactor_closed`, `session_energy_wh`; optional: `voltageA_v`–`voltageC_v`, `currentA_a`–`currentC_a`, `current_alerts` |
+| `/api/1/lifetime` | `energy_wh` |
+| `/api/1/version` | optional: `serial_number`, `firmware_version`, `part_number` |
+
+To check, open `http://<charger-ip>/api/1/vitals` in a browser. If the
+fields are there, it's worth a try. Please report the result in an issue,
+either way. Older Wall Connectors (Gen 2 and earlier) have no network API, so
+they can't work. Chargers that already support OCPP don't need this bridge:
+point them at the backend directly.
 
 ## Before you start
 
@@ -126,3 +157,18 @@ approving review.
 ## License
 
 [MIT](LICENSE). Not affiliated with Tesla or CircleLink.
+
+[version-shield]: https://img.shields.io/badge/dynamic/yaml?url=https%3A%2F%2Fraw.githubusercontent.com%2FBrunas%2Ftesla-ocpp-bridge%2Fmain%2Faddon%2Fconfig.yaml&query=%24.version&label=app%20version
+[ci-shield]: https://github.com/Brunas/tesla-ocpp-bridge/actions/workflows/build.yml/badge.svg?branch=main
+[ci]: https://github.com/Brunas/tesla-ocpp-bridge/actions/workflows/build.yml
+[commits-shield]: https://img.shields.io/github/commit-activity/y/Brunas/tesla-ocpp-bridge.svg
+[commits]: https://github.com/Brunas/tesla-ocpp-bridge/commits/main
+[license-shield]: https://img.shields.io/github/license/Brunas/tesla-ocpp-bridge.svg
+[maintenance-shield]: https://img.shields.io/badge/maintainer-Brunas-blue.svg
+[maintainer]: https://github.com/Brunas
+[black-shield]: https://img.shields.io/badge/code%20style-black-000000.svg
+[black]: https://github.com/psf/black
+[ruff-shield]: https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json
+[ruff]: https://github.com/astral-sh/ruff
+[coffee-shield]: https://img.shields.io/badge/Buy%20me%20a%20coffee-FFDD00?logo=buymeacoffee&logoColor=black
+[coffee]: https://buymeacoffee.com/pdfdc52z8h

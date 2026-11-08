@@ -4,6 +4,11 @@ Makes a Tesla Wall Connector Gen 3 appear as an OCPP 1.6J charge point to a
 backend such as CircleLink. Sessions (plug-in to unplug), energy and status
 are read from the Wall Connector's local API (`http://<ip>/api/1/vitals`).
 
+Other chargers on your local network that answer the same API (`/api/1/vitals`,
+`/api/1/lifetime`) may work too, but only the Gen 3 has been tested. The
+[README](https://github.com/Brunas/tesla-ocpp-bridge#other-chargers) lists the
+fields the app needs.
+
 ## Options
 
 Set these on the *Configuration* tab. **Charger ID**, **Wall Connector address**

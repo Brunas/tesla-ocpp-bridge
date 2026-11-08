@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.1.4
+
+- The app has its own icon and logo in Home Assistant.
+- The documentation explains that chargers other than the Wall Connector Gen 3
+  may work too, if they are on the local network and answer the same local API
+  (`/api/1/vitals`, `/api/1/lifetime`). Only the Gen 3 has been tested.
+- The code is now formatted with Black (line length 120). This changes how the
+  code looks, not what it does.
+
 ## 0.1.3
 
 - When the backend first answers "Pending" and then asks for a new
