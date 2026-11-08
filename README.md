@@ -48,6 +48,24 @@ after an internet outage or a restart, so sessions are not lost.
 The bridge does **not** control the charger, because the Wall Connector API is
 read-only. It rejects RemoteStart/Stop and SetChargingProfile.
 
+## Other chargers
+
+Only the Tesla Wall Connector Gen 3 has been tested. The bridge may also work
+with other chargers, such as the Tesla Universal Wall Connector, if they are
+on your local network and answer the same local HTTP API without a login:
+
+| Endpoint | Fields the bridge reads |
+|---|---|
+| `/api/1/vitals` | `vehicle_connected`, `contactor_closed`, `session_energy_wh`; optional: `voltageA_v`–`voltageC_v`, `currentA_a`–`currentC_a`, `current_alerts` |
+| `/api/1/lifetime` | `energy_wh` |
+| `/api/1/version` | optional: `serial_number`, `firmware_version`, `part_number` |
+
+To check, open `http://<charger-ip>/api/1/vitals` in a browser. If the
+fields are there, it's worth a try. Please report the result in an issue,
+either way. Older Wall Connectors (Gen 2 and earlier) have no network API, so
+they can't work. Chargers that already support OCPP don't need this bridge:
+point them at the backend directly.
+
 ## Before you start
 
 1. Give the Wall Connector a fixed IP (DHCP reservation on the Asus router).
