@@ -1,4 +1,17 @@
+<p align="center">
+  <img src="assets/logo.svg" alt="Wall Connector OCPP bridge logo" width="375">
+</p>
+
 # Tesla Wall Connector Gen 3 → OCPP bridge
+
+[![App version][version-shield]](addon/CHANGELOG.md)
+[![CI][ci-shield]][ci]
+[![GitHub Activity][commits-shield]][commits]
+[![License][license-shield]](LICENSE)
+[![Project Maintenance][maintenance-shield]][maintainer]
+[![Code style: black][black-shield]][black]
+[![Linting: Ruff][ruff-shield]][ruff]
+[![Buy Me A Coffee][coffee-shield]][coffee]
 
 [![Add repository to my Home Assistant](https://my.home-assistant.io/badges/supervisor_add_addon_repository.svg)](https://my.home-assistant.io/redirect/supervisor_add_addon_repository/?repository_url=https%3A%2F%2Fgithub.com%2FBrunas%2Ftesla-ocpp-bridge)
 
@@ -126,3 +139,18 @@ approving review.
 ## License
 
 [MIT](LICENSE). Not affiliated with Tesla or CircleLink.
+
+[version-shield]: https://img.shields.io/badge/dynamic/yaml?url=https%3A%2F%2Fraw.githubusercontent.com%2FBrunas%2Ftesla-ocpp-bridge%2Fmain%2Faddon%2Fconfig.yaml&query=%24.version&label=app%20version
+[ci-shield]: https://github.com/Brunas/tesla-ocpp-bridge/actions/workflows/build.yml/badge.svg?branch=main
+[ci]: https://github.com/Brunas/tesla-ocpp-bridge/actions/workflows/build.yml
+[commits-shield]: https://img.shields.io/github/commit-activity/y/Brunas/tesla-ocpp-bridge.svg
+[commits]: https://github.com/Brunas/tesla-ocpp-bridge/commits/main
+[license-shield]: https://img.shields.io/github/license/Brunas/tesla-ocpp-bridge.svg
+[maintenance-shield]: https://img.shields.io/badge/maintainer-Brunas-blue.svg
+[maintainer]: https://github.com/Brunas
+[black-shield]: https://img.shields.io/badge/code%20style-black-000000.svg
+[black]: https://github.com/psf/black
+[ruff-shield]: https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json
+[ruff]: https://github.com/astral-sh/ruff
+[coffee-shield]: https://img.shields.io/badge/Buy%20me%20a%20coffee-FFDD00?logo=buymeacoffee&logoColor=black
+[coffee]: https://buymeacoffee.com/pdfdc52z8h

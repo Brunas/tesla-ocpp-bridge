@@ -21,8 +21,11 @@ class FakeTWC:
         self.calls.append(endpoint)
         if self.fail:
             raise OSError("unreachable")
-        return {"vitals": self.vitals, "lifetime": lifetime(1000),
-                "version": {"serial_number": "PGT1", "firmware_version": "1.2.3"}}[endpoint]
+        return {
+            "vitals": self.vitals,
+            "lifetime": lifetime(1000),
+            "version": {"serial_number": "PGT1", "firmware_version": "1.2.3"},
+        }[endpoint]
 
 
 async def run_poller(bridge, until, timeout=2.0):
@@ -70,7 +73,6 @@ def test_short_outage_keeps_status(cfg):
     asyncio.run(scenario())
     assert b.status == S.charging  # 60 s grace period not yet over
     assert b.state.tx is not None  # session not ended by a network blip
-
 
 
 def warnings(caplog):

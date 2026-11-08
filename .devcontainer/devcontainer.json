@@ -16,8 +16,12 @@
       "extensions": [
         "ms-python.python",
         "charliermarsh.ruff",
+        "ms-python.black-formatter",
         "ms-azuretools.vscode-docker"
-      ]
+      ],
+      "settings": {
+        "[python]": { "editor.defaultFormatter": "ms-python.black-formatter" }
+      }
     }
   }
 }

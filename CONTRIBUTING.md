@@ -66,7 +66,7 @@ tesla-ocpp-bridge/
 ├── tools/                      # fake_twc.py, fake_csms.py simulators, smoke_test.sh
 ├── .devcontainer/ .github/ .vscode/
 ├── docker-compose.yml          # TrueNAS / plain Docker
-├── pyproject.toml              # pytest + ruff config (dev only)
+├── pyproject.toml              # pytest, black + ruff config (dev only)
 ├── requirements-dev.txt
 └── repository.yaml             # makes this repo an HA app repository
 ```
@@ -94,6 +94,7 @@ points the bridge at the real CircleLink and a real Wall Connector.
 
 ```sh
 python -m pytest     # unit tests: about 2 s, no network or charger needed
+black .              # format (CI runs black --check)
 ruff check .         # lint
 ```
 
@@ -124,7 +125,7 @@ meter values, unplug. Needs only Docker and takes about 10 s.
 `.github/workflows/build.yml` runs on pushes to `main`, PRs, `v*` tags and
 weekly (Monday 04:23 UTC):
 
-1. `ruff check` + pytest on Python 3.12, 3.13 and 3.14;
+1. `black --check`, `ruff check` and pytest on Python 3.12, 3.13 and 3.14;
 2. an amd64 image build plus the container smoke test above. On PRs, CI stops
    here;
 3. otherwise, an amd64 image is pushed to
@@ -156,7 +157,8 @@ time.
 - Keep the energy register from ever decreasing, and deliver the outbox
   strictly in order. Many tests guard these two invariants. AGENTS.md
   explains why they matter.
-- Code style is whatever `ruff check .` accepts (line length 100).
+- Code is formatted with `black .` and must pass `ruff check .` (line length
+  120 for both).
 - On Home Assistant the app runs under the AppArmor profile
   `addon/apparmor.txt`. It may only read its code, read and write `/data`,
   and use the network. If your change needs other files, or starts another
@@ -208,7 +210,7 @@ Nobody can push to `main` directly.
 3. Fill in the pull request template: what changed, why, and how you tested
    it. Say whether you tried it on a real Wall Connector or backend, and which
    one. That is valuable, because CI only uses simulators.
-4. CI must pass. It runs ruff and the tests on Python 3.12–3.14, and the
+4. CI must pass. It runs black, ruff and the tests on Python 3.12–3.14, and the
    container smoke test.
 5. A pull request needs **one approving review** before it can be merged. The
    repository owner is asked for a review automatically (`.github/CODEOWNERS`).

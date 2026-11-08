@@ -22,8 +22,7 @@ def result(frame):
 
 def test_get_configuration_all(bridge):
     keys = {k["key"]: k for k in result(ask(bridge, "GetConfiguration", {}))["configurationKey"]}
-    assert keys["HeartbeatInterval"] == {"key": "HeartbeatInterval", "readonly": False,
-                                         "value": "300"}
+    assert keys["HeartbeatInterval"] == {"key": "HeartbeatInterval", "readonly": False, "value": "300"}
     assert "MeterValueSampleInterval" in keys
 
 
@@ -34,29 +33,39 @@ def test_get_configuration_specific_and_unknown(bridge):
 
 
 def test_change_configuration(bridge):
-    res = result(ask(bridge, "ChangeConfiguration",
-                     {"key": "MeterValueSampleInterval", "value": "15"}))
+    res = result(ask(bridge, "ChangeConfiguration", {"key": "MeterValueSampleInterval", "value": "15"}))
     assert res == {"status": "Accepted"}
     assert bridge.meter_interval == 15
 
 
-@pytest.mark.parametrize("action,payload,expected", [
-    ("RemoteStartTransaction", {"idTag": "ABC"}, "Rejected"),
-    ("RemoteStopTransaction", {"transactionId": 42}, "Rejected"),
-    ("UnlockConnector", {"connectorId": 1}, "NotSupported"),
-    ("ChangeAvailability", {"connectorId": 0, "type": "Operative"}, "Accepted"),
-    ("ClearCache", {}, "Accepted"),
-    ("DataTransfer", {"vendorId": "com.example"}, "UnknownVendorId"),
-    ("SetChargingProfile", {
-        "connectorId": 1,
-        "csChargingProfiles": {
-            "chargingProfileId": 1, "stackLevel": 0,
-            "chargingProfilePurpose": "TxDefaultProfile", "chargingProfileKind": "Absolute",
-            "chargingSchedule": {"chargingRateUnit": "A",
-                                 "chargingSchedulePeriod": [{"startPeriod": 0, "limit": 16}]},
-        },
-    }, "NotSupported"),
-])
+@pytest.mark.parametrize(
+    "action,payload,expected",
+    [
+        ("RemoteStartTransaction", {"idTag": "ABC"}, "Rejected"),
+        ("RemoteStopTransaction", {"transactionId": 42}, "Rejected"),
+        ("UnlockConnector", {"connectorId": 1}, "NotSupported"),
+        ("ChangeAvailability", {"connectorId": 0, "type": "Operative"}, "Accepted"),
+        ("ClearCache", {}, "Accepted"),
+        ("DataTransfer", {"vendorId": "com.example"}, "UnknownVendorId"),
+        (
+            "SetChargingProfile",
+            {
+                "connectorId": 1,
+                "csChargingProfiles": {
+                    "chargingProfileId": 1,
+                    "stackLevel": 0,
+                    "chargingProfilePurpose": "TxDefaultProfile",
+                    "chargingProfileKind": "Absolute",
+                    "chargingSchedule": {
+                        "chargingRateUnit": "A",
+                        "chargingSchedulePeriod": [{"startPeriod": 0, "limit": 16}],
+                    },
+                },
+            },
+            "NotSupported",
+        ),
+    ],
+)
 def test_simple_requests(bridge, action, payload, expected):
     assert result(ask(bridge, action, payload))["status"] == expected
 
@@ -72,8 +81,7 @@ def test_trigger_status_notification(bridge):
 
     async def scenario():
         cp, conn = attach(bridge)
-        frame = await incoming(cp, conn, "TriggerMessage",
-                               {"requestedMessage": "StatusNotification"})
+        frame = await incoming(cp, conn, "TriggerMessage", {"requestedMessage": "StatusNotification"})
         await wait_until(lambda: conn.payloads("StatusNotification"))
         return frame, conn
 
@@ -82,11 +90,14 @@ def test_trigger_status_notification(bridge):
     assert conn.payloads("StatusNotification")[0]["status"] == "Preparing"
 
 
-@pytest.mark.parametrize("requested,action", [
-    ("Heartbeat", "Heartbeat"),
-    ("BootNotification", "BootNotification"),
-    ("MeterValues", "MeterValues"),
-])
+@pytest.mark.parametrize(
+    "requested,action",
+    [
+        ("Heartbeat", "Heartbeat"),
+        ("BootNotification", "BootNotification"),
+        ("MeterValues", "MeterValues"),
+    ],
+)
 def test_trigger_other_messages(bridge, requested, action):
     bridge.vitals = vitals()
 
@@ -100,8 +111,7 @@ def test_trigger_other_messages(bridge, requested, action):
 
 
 def test_trigger_unsupported_message(bridge):
-    res = result(ask(bridge, "TriggerMessage",
-                     {"requestedMessage": "FirmwareStatusNotification"}))
+    res = result(ask(bridge, "TriggerMessage", {"requestedMessage": "FirmwareStatusNotification"}))
     assert res == {"status": "NotImplemented"}
 
 

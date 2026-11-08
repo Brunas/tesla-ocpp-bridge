@@ -6,8 +6,7 @@ from tesla_ocpp_bridge.state import State
 
 def test_defaults_exposed(bridge):
     keys = bridge.configuration_keys()
-    assert keys["HeartbeatInterval"] == {"key": "HeartbeatInterval", "readonly": False,
-                                         "value": "300"}
+    assert keys["HeartbeatInterval"] == {"key": "HeartbeatInterval", "readonly": False, "value": "300"}
     assert keys["MeterValueSampleInterval"]["value"] == "60"
     assert keys["NumberOfConnectors"]["value"] == "1"
     assert keys["NumberOfConnectors"]["readonly"] is True

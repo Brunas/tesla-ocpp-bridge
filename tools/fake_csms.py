@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """Minimal OCPP 1.6J central system that logs everything the bridge sends.
 
-    python tools/fake_csms.py --port 9000
-    # then run the bridge with OCPP_URL=ws://localhost:9000
+python tools/fake_csms.py --port 9000
+# then run the bridge with OCPP_URL=ws://localhost:9000
 """
+
 import argparse
 import asyncio
 import itertools
@@ -28,8 +29,7 @@ class CentralChargePoint(ChargePoint):
     @on(Action.boot_notification)
     def on_boot(self, **kw):
         log.info("BootNotification %s", kw)
-        return call_result.BootNotification(current_time=now(), interval=30,
-                                            status=RegistrationStatus.accepted)
+        return call_result.BootNotification(current_time=now(), interval=30, status=RegistrationStatus.accepted)
 
     @on(Action.heartbeat)
     def on_heartbeat(self):
@@ -45,13 +45,13 @@ class CentralChargePoint(ChargePoint):
     def on_start_transaction(self, **kw):
         tid = next(tx_counter)
         log.info("StartTransaction -> id %s %s", tid, kw)
-        return call_result.StartTransaction(transaction_id=tid,
-                                            id_tag_info={"status": AuthorizationStatus.accepted})
+        return call_result.StartTransaction(transaction_id=tid, id_tag_info={"status": AuthorizationStatus.accepted})
 
     @on(Action.meter_values)
     def on_meter(self, **kw):
-        sv = {s.get("measurand"): s["value"] for s in kw["meter_value"][0]["sampled_value"]
-              if s.get("phase") in (None,)}
+        sv = {
+            s.get("measurand"): s["value"] for s in kw["meter_value"][0]["sampled_value"] if s.get("phase") in (None,)
+        }
         log.info("MeterValues tx=%s %s", kw.get("transaction_id"), sv)
         return call_result.MeterValues()
 
@@ -63,8 +63,12 @@ class CentralChargePoint(ChargePoint):
 
 async def handler(ws):
     cp_id = ws.request.path.strip("/")
-    log.info("Charge point connected: %s (subprotocol %s, auth %s)", cp_id, ws.subprotocol,
-             ws.request.headers.get("Authorization"))
+    log.info(
+        "Charge point connected: %s (subprotocol %s, auth %s)",
+        cp_id,
+        ws.subprotocol,
+        ws.request.headers.get("Authorization"),
+    )
     await CentralChargePoint(cp_id, ws).start()
 
 

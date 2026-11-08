@@ -71,9 +71,7 @@ class Bridge:
 
     @property
     def meter_interval(self) -> int:
-        return int(
-            self.state.config.get("MeterValueSampleInterval", self.cfg["meter_value_interval"])
-        )
+        return int(self.state.config.get("MeterValueSampleInterval", self.cfg["meter_value_interval"]))
 
     def configuration_keys(self) -> dict[str, dict]:
         def k(key, value, readonly=True):
@@ -82,8 +80,7 @@ class Bridge:
         keys = [
             k("HeartbeatInterval", self.heartbeat_interval, readonly=False),
             k("MeterValueSampleInterval", self.meter_interval, readonly=False),
-            k("MeterValuesSampledData",
-              "Energy.Active.Import.Register,Power.Active.Import,Current.Import,Voltage"),
+            k("MeterValuesSampledData", "Energy.Active.Import.Register,Power.Active.Import,Current.Import,Voltage"),
             k("NumberOfConnectors", 1),
             k("SupportedFeatureProfiles", "Core,RemoteTrigger"),
             k("AuthorizeRemoteTxRequests", "false"),
@@ -131,9 +128,11 @@ class Bridge:
                         self.version.get("part_number"),
                     )
                 if fail_count:
-                    log.log(logging.INFO if warned else logging.DEBUG,
-                            "Wall Connector reachable again after %.0fs",
-                            loop.time() - down_since)
+                    log.log(
+                        logging.INFO if warned else logging.DEBUG,
+                        "Wall Connector reachable again after %.0fs",
+                        loop.time() - down_since,
+                    )
                 fail_count = 0
                 warned = False
                 last_ok = loop.time()
@@ -148,11 +147,8 @@ class Bridge:
                 log.debug("Wall Connector poll failed (%d): %r", fail_count, exc)
                 # Wi-Fi blips of a few seconds are common: only warn once it stays down,
                 # but right away if it was never reachable (wrong address?).
-                if (not warned and (down > TWC_WARN_AFTER_S or not self.twc_seen)) or (
-                    warned and fail_count % 60 == 0
-                ):
-                    log.warning("Wall Connector unreachable for %.0fs, %d failed poll(s): %r",
-                                down, fail_count, exc)
+                if (not warned and (down > TWC_WARN_AFTER_S or not self.twc_seen)) or (warned and fail_count % 60 == 0):
+                    log.warning("Wall Connector unreachable for %.0fs, %d failed poll(s): %r", down, fail_count, exc)
                     warned = True
                 if loop.time() - last_ok > TWC_OFFLINE_AFTER_S:
                     self.twc_ok = False
@@ -309,16 +305,34 @@ class Bridge:
             if volts < 50:  # phase not wired (single-phase install)
                 continue
             power_w += volts * amps
-            sampled.append({"value": f"{amps:.1f}", "context": context,
-                            "measurand": Measurand.current_import, "phase": iphase,
-                            "unit": UnitOfMeasure.a})
-            sampled.append({"value": f"{volts:.1f}", "context": context,
-                            "measurand": Measurand.voltage, "phase": vphase,
-                            "unit": UnitOfMeasure.v})
+            sampled.append(
+                {
+                    "value": f"{amps:.1f}",
+                    "context": context,
+                    "measurand": Measurand.current_import,
+                    "phase": iphase,
+                    "unit": UnitOfMeasure.a,
+                }
+            )
+            sampled.append(
+                {
+                    "value": f"{volts:.1f}",
+                    "context": context,
+                    "measurand": Measurand.voltage,
+                    "phase": vphase,
+                    "unit": UnitOfMeasure.v,
+                }
+            )
         if not v.get("contactor_closed"):
             power_w = 0.0
-        sampled.append({"value": f"{power_w:.0f}", "context": context,
-                        "measurand": Measurand.power_active_import, "unit": UnitOfMeasure.w})
+        sampled.append(
+            {
+                "value": f"{power_w:.0f}",
+                "context": context,
+                "measurand": Measurand.power_active_import,
+                "unit": UnitOfMeasure.w,
+            }
+        )
         return {"timestamp": ts, "sampled_value": sampled}
 
     async def meter_loop(self) -> None:
@@ -334,8 +348,7 @@ class Bridge:
     def queue_meter(self, local_id: str, context: str) -> None:
         st = self.state
         st.outbox.append(
-            {"kind": "meter", "local_id": local_id,
-             "meter_value": [self.build_meter_value(now_iso(), context)]}
+            {"kind": "meter", "local_id": local_id, "meter_value": [self.build_meter_value(now_iso(), context)]}
         )
         # While offline, keep the queue bounded by dropping the oldest samples.
         meters = [i for i, m in enumerate(st.outbox) if m["kind"] == "meter"]
@@ -348,9 +361,11 @@ class Bridge:
         tx = self.state.tx
         mv = [self.build_meter_value(now_iso(), ReadingContext.trigger)]
         if tx is not None and tx["local_id"] in self.state.tx_ids:
-            await self.cp.call(call.MeterValues(
-                connector_id=CONNECTOR_ID, meter_value=mv,
-                transaction_id=self.state.tx_ids[tx["local_id"]]))
+            await self.cp.call(
+                call.MeterValues(
+                    connector_id=CONNECTOR_ID, meter_value=mv, transaction_id=self.state.tx_ids[tx["local_id"]]
+                )
+            )
         else:
             await self.cp.call(call.MeterValues(connector_id=CONNECTOR_ID, meter_value=mv))
 
@@ -360,9 +375,14 @@ class Bridge:
         st = self.state
         kind = item["kind"]
         if kind == "start":
-            res = await cp.call(call.StartTransaction(
-                connector_id=CONNECTOR_ID, id_tag=item["id_tag"],
-                meter_start=item["meter_start"], timestamp=item["timestamp"]))
+            res = await cp.call(
+                call.StartTransaction(
+                    connector_id=CONNECTOR_ID,
+                    id_tag=item["id_tag"],
+                    meter_start=item["meter_start"],
+                    timestamp=item["timestamp"],
+                )
+            )
             if res is None:
                 # Don't block the queue forever; following messages for it get dropped.
                 log.error("StartTransaction refused with CallError; dropping transaction")
@@ -379,13 +399,19 @@ class Bridge:
             log.warning("Dropping %s for unknown transaction %s", kind, item["local_id"])
             return
         if kind == "meter":
-            await cp.call(call.MeterValues(
-                connector_id=CONNECTOR_ID, meter_value=item["meter_value"],
-                transaction_id=tx_id))
+            await cp.call(
+                call.MeterValues(connector_id=CONNECTOR_ID, meter_value=item["meter_value"], transaction_id=tx_id)
+            )
         elif kind == "stop":
-            await cp.call(call.StopTransaction(
-                meter_stop=item["meter_stop"], timestamp=item["timestamp"],
-                transaction_id=tx_id, reason=item["reason"], id_tag=item["id_tag"]))
+            await cp.call(
+                call.StopTransaction(
+                    meter_stop=item["meter_stop"],
+                    timestamp=item["timestamp"],
+                    transaction_id=tx_id,
+                    reason=item["reason"],
+                    id_tag=item["id_tag"],
+                )
+            )
             st.tx_ids.pop(item["local_id"], None)
 
     async def outbox_loop(self, cp: BridgeChargePoint) -> None:
@@ -413,12 +439,14 @@ class Bridge:
     # ---- connection management -----------------------------------------------------
 
     async def send_boot(self, cp: BridgeChargePoint) -> bool:
-        res = await cp.call(call.BootNotification(
-            charge_point_vendor=self.cfg["vendor"][:20],
-            charge_point_model=self.cfg["model"][:20],
-            charge_point_serial_number=(self.version.get("serial_number") or None),
-            firmware_version=(self.version.get("firmware_version") or None),
-        ))
+        res = await cp.call(
+            call.BootNotification(
+                charge_point_vendor=self.cfg["vendor"][:20],
+                charge_point_model=self.cfg["model"][:20],
+                charge_point_serial_number=(self.version.get("serial_number") or None),
+                firmware_version=(self.version.get("firmware_version") or None),
+            )
+        )
         if res is None:
             raise RuntimeError("BootNotification returned CallError")
         if res.status == RegistrationStatus.accepted:
@@ -450,9 +478,7 @@ class Bridge:
         self.cp = cp
         self.last_sent_status = None
         self.status_event.set()
-        await asyncio.gather(
-            self.heartbeat_loop(cp), self.outbox_loop(cp), self.status_loop()
-        )
+        await asyncio.gather(self.heartbeat_loop(cp), self.outbox_loop(cp), self.status_loop())
 
     def ws_url(self) -> str:
         base = self.cfg["ocpp_url"].rstrip("/")
@@ -496,8 +522,7 @@ class Bridge:
                     **kwargs,
                 ) as ws:
                     if ws.subprotocol != "ocpp1.6":
-                        log.warning("Server did not confirm ocpp1.6 subprotocol (%s)",
-                                    ws.subprotocol)
+                        log.warning("Server did not confirm ocpp1.6 subprotocol (%s)", ws.subprotocol)
                     log.info("Connected")
                     backoff = 5
                     cp = BridgeChargePoint(self.cfg["charge_point_id"], ws, self)

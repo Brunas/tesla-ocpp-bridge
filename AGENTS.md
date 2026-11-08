@@ -44,6 +44,7 @@ SetChargingProfile are rejected on purpose: the API cannot control charging.
 ```sh
 pip install -r requirements-dev.txt
 python -m pytest            # 100 unit tests, ~2 s, no network
+black .                     # format (CI runs black --check)
 ruff check .
 cd addon/app && python -m tesla_ocpp_bridge     # needs env vars, see CONTRIBUTING
 python tools/fake_twc.py --port 8081 --speed 30 # simulators for manual runs

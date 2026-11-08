@@ -4,14 +4,17 @@ from ocpp.v16.enums import ChargePointStatus as S
 from helpers import lifetime, vitals
 
 
-@pytest.mark.parametrize("twc_ok,v,has_tx,expected", [
-    (False, vitals(plugged=True, charging=True), True, S.unavailable),
-    (True, vitals(), False, S.available),
-    (True, vitals(plugged=True), False, S.preparing),
-    (True, vitals(plugged=True, session_wh=0), True, S.preparing),
-    (True, vitals(plugged=True, charging=True, session_wh=10), True, S.charging),
-    (True, vitals(plugged=True, charging=False, session_wh=10), True, S.suspended_ev),
-])
+@pytest.mark.parametrize(
+    "twc_ok,v,has_tx,expected",
+    [
+        (False, vitals(plugged=True, charging=True), True, S.unavailable),
+        (True, vitals(), False, S.available),
+        (True, vitals(plugged=True), False, S.preparing),
+        (True, vitals(plugged=True, session_wh=0), True, S.preparing),
+        (True, vitals(plugged=True, charging=True, session_wh=10), True, S.charging),
+        (True, vitals(plugged=True, charging=False, session_wh=10), True, S.suspended_ev),
+    ],
+)
 def test_compute_status(bridge, twc_ok, v, has_tx, expected):
     bridge.twc_ok = twc_ok
     bridge.vitals = v
