@@ -6,10 +6,18 @@ The Tesla Wall Connector Gen 3 has no OCPP support, so there is nothing to
 proxy. This bridge **acts as the charge point instead**. It polls the Wall
 Connector's local HTTP API and talks OCPP 1.6J to the backend:
 
-```
-Wall Connector  --HTTP poll-->  bridge  --OCPP 1.6J / wss-->  ocpp.circlelink.app/<charger ID>
- /api/1/vitals                (HA app or
- /api/1/lifetime                 Docker)
+```mermaid
+flowchart LR
+    TWC["Tesla Wall Connector Gen 3<br/>/api/1/vitals<br/>/api/1/lifetime"]
+    subgraph host["Home Assistant app or Docker"]
+        B["tesla-ocpp-bridge"]
+        S[("/data/state.json<br/>open session + unsent messages")]
+    end
+    CSMS["CircleLink<br/>wss://ocpp.circlelink.app/#60;charger ID#62;"]
+
+    TWC -->|"HTTP poll<br/>every poll_interval s"| B
+    B <-->|"OCPP 1.6J<br/>WebSocket over TLS"| CSMS
+    B <-.->|"persist / replay"| S
 ```
 
 | Wall Connector | OCPP sent |
@@ -80,9 +88,9 @@ docker compose logs -f
 On TrueNAS SCALE 24.10+ you can paste the compose file as a *Custom App*
 (Apps → Discover → ⋮ → Install via YAML). Remove the `build:` line there. The
 app then pulls `ghcr.io/<owner>/tesla-ocpp-bridge` built by GitHub Actions
-(see below). Make the GHCR package public, or add registry credentials in
-TrueNAS. Relative paths don't resolve in a pasted YAML. Put `.env` and `data/`
-on a dataset and use absolute paths, e.g.
+(see [CI and images](CONTRIBUTING.md#ci-and-images)). Make the GHCR package
+public, or add registry credentials in TrueNAS. Relative paths don't resolve in
+a pasted YAML. Put `.env` and `data/` on a dataset and use absolute paths, e.g.
 `env_file: /mnt/<pool>/apps/tesla-ocpp-bridge/.env`.
 
 The Asus router (Gnuton/Merlin) could run it via Entware Python, but it's the
@@ -109,116 +117,10 @@ weakest option, so prefer HA or TrueNAS.
 | `LOG_LEVEL` | `log_level` | `info` (`debug` prints raw OCPP frames) |
 | `STATE_FILE` | – | `/data/state.json` |
 
-## Development
-
-### Layout
-
-```
-tesla-ocpp-bridge/
-├── addon/                      # Home Assistant app = Docker build context
-│   ├── config.yaml             #   app manifest (version, options schema)
-│   ├── apparmor.txt            #   AppArmor profile (CI smoke test runs under it)
-│   ├── CHANGELOG.md            #   shown in HA's update dialog
-│   ├── translations/           #   Configuration tab labels (en, lt)
-│   ├── DOCS.md                 #   shown on the app page in HA
-│   ├── Dockerfile              #   also used for TrueNAS / plain Docker
-│   ├── requirements.txt        #   runtime dependencies (pinned)
-│   └── app/tesla_ocpp_bridge/  #   the Python package
-│       ├── __main__.py         #     entry point: python -m tesla_ocpp_bridge
-│       ├── config.py           #     defaults <- options.json <- env vars
-│       ├── state.py            #     state.json: open session + undelivered messages
-│       ├── wall_connector.py   #     Wall Connector local HTTP API client
-│       ├── charge_point.py     #     requests from the central system
-│       └── bridge.py           #     sessions, energy register, outbox, connection
-├── tests/                      # pytest unit tests (no network needed)
-├── tools/                      # fake_twc.py, fake_csms.py simulators, smoke_test.sh
-├── .devcontainer/ .github/ .vscode/
-├── docker-compose.yml          # TrueNAS / plain Docker
-├── pyproject.toml              # pytest + ruff config (dev only)
-├── requirements-dev.txt
-└── repository.yaml             # makes this repo an HA app repository
-```
-
-Open the folder in VS Code → *Reopen in Container* (`.devcontainer/`, Python
-3.14). Or run `pip install -r requirements-dev.txt` locally (Python ≥ 3.12).
-
-### Run against simulators
-
-```sh
-python tools/fake_twc.py --port 8081 --speed 30 &   # fake Wall Connector
-python tools/fake_csms.py --port 9000 &              # fake OCPP backend
-cd addon/app && OCPP_URL=ws://127.0.0.1:9000 CHARGE_POINT_ID=SIM-CP-0001 \
-  TWC_HOST=127.0.0.1:8081 STATE_FILE=../../.data/state.json OPTIONS_FILE=/nonexistent \
-  METER_VALUE_INTERVAL=5 python -m tesla_ocpp_bridge
-
-curl 'localhost:8081/control?plug=1'      # plug in
-curl 'localhost:8081/control?charge=1'    # start charging
-curl 'localhost:8081/control?plug=0'      # unplug -> StopTransaction
-```
-
-`.vscode/launch.json` has debug configurations for all three. One of them
-points the bridge at the real CircleLink and a real Wall Connector.
-
-### Tests and lint
-
-```sh
-python -m pytest
-ruff check .
-```
-
-Unit tests need no network or charger. OCPP traffic goes through an in-memory
-peer (`tests/helpers.py`). Every frame is still schema-validated by the `ocpp`
-library in both directions. Coverage:
-
-| File | Covers |
-|---|---|
-| `test_sessions.py` | plug/unplug → Start/StopTransaction, energy register (lifetime lag, counter reset, never decreasing), restart mid-session |
-| `test_ocpp_outgoing.py` | ordered offline replay, CallError/timeouts, BootNotification, StatusNotification dedupe |
-| `test_ocpp_incoming.py` | GetConfiguration, ChangeConfiguration, TriggerMessage, rejected remote control, Reset |
-| `test_status.py`, `test_meter_values.py` | connector status mapping, sampled values (1- and 3-phase), queue bound |
-| `test_polling.py` | Wall Connector polling, outage grace period → Unavailable |
-| `test_config.py`, `test_state.py`, `test_configuration_keys.py` | config sources, auth/TLS, state file, OCPP config keys |
-
-### Container smoke test
-
-```sh
-docker build -t tesla-ocpp-bridge:smoke addon && tools/smoke_test.sh
-```
-
-Runs the built image against both simulators, each in its own container on a
-private Docker network, and drives one session through it: boot, plug in,
-meter values, unplug. Needs only Docker and takes about 10 s.
-
-### CI / images
-
-`.github/workflows/build.yml` runs on pushes to `main`, PRs, `v*` tags and
-weekly (Monday 04:23 UTC):
-
-1. `ruff check` + pytest on Python 3.12, 3.13 and 3.14;
-2. an amd64 image build plus the container smoke test above. On PRs, CI stops
-   here;
-3. otherwise, an amd64 image is pushed to
-   `ghcr.io/<owner>/tesla-ocpp-bridge` with tags `main`, `latest`, `sha-…`
-   and, for tags, `1.2.3` / `1.2`. This happens only if 1 and 2 passed. On
-   `v*` tags, it also requires the tag to match `version:` in
-   `addon/config.yaml`. The weekly run rebuilds `latest` on the newest
-   `python:3.14-alpine` to pick up its security patches;
-4. GHCR pruning: release tags, `latest` and `main` are kept forever, plus the
-   10 newest other tagged images (`sha-…`). Untagged and broken images
-   are deleted. Nothing younger than a day is touched. If this job
-   fails with a permission error, give the repository the **Admin** role in the
-   package's *Manage Actions access* settings.
-
-Dependabot (`.github/dependabot.yml`) opens weekly PRs for pip packages and
-GitHub Actions. Minor and patch updates are grouped; major ones come one at a
-time.
-
-To release: bump `version` in `addon/config.yaml` in a pull request. After it
-is merged, tag that commit on `main` with `git tag v0.1.1 && git push origin v0.1.1`.
-
 ## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md). Pull requests need passing CI and one
+Development setup, simulators, tests, CI and releases are described in
+[CONTRIBUTING.md](CONTRIBUTING.md). Pull requests need passing CI and one
 approving review.
 
 ## License

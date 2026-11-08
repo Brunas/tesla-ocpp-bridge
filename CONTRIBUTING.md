@@ -27,27 +27,119 @@ Please include:
 posting them.** Anyone who has the charger ID may be able to send sessions to
 your account.
 
-## Development setup
+## Development
 
-Use the dev container (VS Code → *Reopen in Container*, Python 3.14), or a
-local Python 3.12+:
+### Setup
+
+Use the dev container (VS Code → *Reopen in Container*, `.devcontainer/`,
+Python 3.14), or a local Python 3.12+:
 
 ```sh
 pip install -r requirements-dev.txt
-python -m pytest     # unit tests: about 1.5 s, no network or charger needed
+```
+
+[AGENTS.md](AGENTS.md) explains the design decisions and the invariants the
+code relies on. Please read it before changing `bridge.py`.
+
+### Layout
+
+```
+tesla-ocpp-bridge/
+├── addon/                      # Home Assistant app = Docker build context
+│   ├── config.yaml             #   app manifest (version, options schema)
+│   ├── apparmor.txt            #   AppArmor profile (CI smoke test runs under it)
+│   ├── CHANGELOG.md            #   shown in HA's update dialog
+│   ├── translations/           #   Configuration tab labels (en, lt)
+│   ├── DOCS.md                 #   shown on the app page in HA
+│   ├── Dockerfile              #   also used for TrueNAS / plain Docker
+│   ├── requirements.txt        #   runtime dependencies (pinned)
+│   └── app/tesla_ocpp_bridge/  #   the Python package
+│       ├── __main__.py         #     entry point: python -m tesla_ocpp_bridge
+│       ├── config.py           #     defaults <- options.json <- env vars
+│       ├── state.py            #     state.json: open session + undelivered messages
+│       ├── wall_connector.py   #     Wall Connector local HTTP API client
+│       ├── charge_point.py     #     requests from the central system
+│       └── bridge.py           #     sessions, energy register, outbox, connection
+├── tests/                      # pytest unit tests (no network needed)
+├── tools/                      # fake_twc.py, fake_csms.py simulators, smoke_test.sh
+├── .devcontainer/ .github/ .vscode/
+├── docker-compose.yml          # TrueNAS / plain Docker
+├── pyproject.toml              # pytest + ruff config (dev only)
+├── requirements-dev.txt
+└── repository.yaml             # makes this repo an HA app repository
+```
+
+### Run against simulators
+
+The simulators stand in for the Wall Connector and the OCPP backend:
+
+```sh
+python tools/fake_twc.py --port 8081 --speed 30 &   # fake Wall Connector
+python tools/fake_csms.py --port 9000 &              # fake OCPP backend
+cd addon/app && OCPP_URL=ws://127.0.0.1:9000 CHARGE_POINT_ID=SIM-CP-0001 \
+  TWC_HOST=127.0.0.1:8081 STATE_FILE=../../.data/state.json OPTIONS_FILE=/nonexistent \
+  METER_VALUE_INTERVAL=5 python -m tesla_ocpp_bridge
+
+curl 'localhost:8081/control?plug=1'      # plug in
+curl 'localhost:8081/control?charge=1'    # start charging
+curl 'localhost:8081/control?plug=0'      # unplug -> StopTransaction
+```
+
+`.vscode/launch.json` has debug configurations for all three. One of them
+points the bridge at the real CircleLink and a real Wall Connector.
+
+### Tests and lint
+
+```sh
+python -m pytest     # unit tests: about 2 s, no network or charger needed
 ruff check .         # lint
 ```
 
-For a manual run, the simulators stand in for the Wall Connector and the
-backend. See *Run against simulators* in the [README](README.md#run-against-simulators).
-To test the Docker image end to end (needs only Docker):
+OCPP traffic goes through an in-memory peer (`tests/helpers.py`). Every frame
+is still schema-validated by the `ocpp` library in both directions. Coverage:
+
+| File | Covers |
+|---|---|
+| `test_sessions.py` | plug/unplug → Start/StopTransaction, energy register (lifetime lag, counter reset, never decreasing), restart mid-session |
+| `test_ocpp_outgoing.py` | ordered offline replay, CallError/timeouts, BootNotification, StatusNotification dedupe |
+| `test_ocpp_incoming.py` | GetConfiguration, ChangeConfiguration, TriggerMessage, rejected remote control, Reset |
+| `test_status.py`, `test_meter_values.py` | connector status mapping, sampled values (1- and 3-phase), queue bound |
+| `test_polling.py` | Wall Connector polling, outage grace period → Unavailable |
+| `test_config.py`, `test_state.py`, `test_configuration_keys.py` | config sources, auth/TLS, state file, OCPP config keys |
+
+### Container smoke test
 
 ```sh
 docker build -t tesla-ocpp-bridge:smoke addon && tools/smoke_test.sh
 ```
 
-[AGENTS.md](AGENTS.md) explains the design decisions and the invariants the
-code relies on. Please read it before changing `bridge.py`.
+Runs the built image against both simulators, each in its own container on a
+private Docker network, and drives one session through it: boot, plug in,
+meter values, unplug. Needs only Docker and takes about 10 s.
+
+### CI and images
+
+`.github/workflows/build.yml` runs on pushes to `main`, PRs, `v*` tags and
+weekly (Monday 04:23 UTC):
+
+1. `ruff check` + pytest on Python 3.12, 3.13 and 3.14;
+2. an amd64 image build plus the container smoke test above. On PRs, CI stops
+   here;
+3. otherwise, an amd64 image is pushed to
+   `ghcr.io/<owner>/tesla-ocpp-bridge` with tags `main`, `latest`, `sha-…`
+   and, for tags, `1.2.3` / `1.2`. This happens only if 1 and 2 passed. On
+   `v*` tags, it also requires the tag to match `version:` in
+   `addon/config.yaml`. The weekly run rebuilds `latest` on the newest
+   `python:3.14-alpine` to pick up its security patches;
+4. GHCR pruning: release tags, `latest` and `main` are kept forever, plus the
+   10 newest other tagged images (`sha-…`). Untagged and broken images
+   are deleted. Nothing younger than a day is touched. If this job
+   fails with a permission error, give the repository the **Admin** role in the
+   package's *Manage Actions access* settings.
+
+Dependabot (`.github/dependabot.yml`) opens weekly PRs for pip packages and
+GitHub Actions. Minor and patch updates are grouped; major ones come one at a
+time.
 
 ## Ground rules
 
@@ -79,7 +171,7 @@ An option has to be added in seven places:
    *Configuration* tab)
 4. `.env.example`
 5. `addon/DOCS.md`
-6. the configuration table in `README.md`
+6. the configuration table in [README.md](README.md#configuration)
 7. a test in `tests/test_config.py`
 
 ### Translations
@@ -107,8 +199,7 @@ Nobody can push to `main` directly.
    repository owner is asked for a review automatically (`.github/CODEOWNERS`).
    After the merge, GitHub deletes the pull request's branch automatically.
 
-Dependabot opens weekly pull requests for dependency updates. They go through
-the same checks and review.
+Dependabot pull requests go through the same checks and review.
 
 ## Releases (maintainers)
 
