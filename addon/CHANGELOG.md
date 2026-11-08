@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.4
+
+- The app has its own icon and logo in Home Assistant.
+
 ## 0.1.3
 
 - When the backend first answers "Pending" and then asks for a new

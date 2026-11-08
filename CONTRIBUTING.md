@@ -51,6 +51,7 @@ tesla-ocpp-bridge/
 │   ├── CHANGELOG.md            #   shown in HA's update dialog
 │   ├── translations/           #   Configuration tab labels (en, lt)
 │   ├── DOCS.md                 #   shown on the app page in HA
+│   ├── icon.png, logo.png      #   shown in HA's app list and app page
 │   ├── Dockerfile              #   also used for TrueNAS / plain Docker
 │   ├── requirements.txt        #   runtime dependencies (pinned)
 │   └── app/tesla_ocpp_bridge/  #   the Python package
@@ -60,6 +61,7 @@ tesla-ocpp-bridge/
 │       ├── wall_connector.py   #     Wall Connector local HTTP API client
 │       ├── charge_point.py     #     requests from the central system
 │       └── bridge.py           #     sessions, energy register, outbox, connection
+├── assets/                     # icon.svg, logo.svg: sources of the PNGs above
 ├── tests/                      # pytest unit tests (no network needed)
 ├── tools/                      # fake_twc.py, fake_csms.py simulators, smoke_test.sh
 ├── .devcontainer/ .github/ .vscode/
@@ -173,6 +175,19 @@ An option has to be added in seven places:
 5. `addon/DOCS.md`
 6. the configuration table in [README.md](README.md#configuration)
 7. a test in `tests/test_config.py`
+
+### Icon and logo
+
+`assets/icon.svg` and `assets/logo.svg` are the sources. After editing one,
+render the PNGs that Home Assistant shows (`rsvg-convert` comes with librsvg):
+
+```sh
+rsvg-convert -w 128 -h 128 assets/icon.svg -o addon/icon.png
+rsvg-convert -w 250 -h 100 assets/logo.svg -o addon/logo.png
+```
+
+Don't use Tesla's or CircleLink's logos: the project is not affiliated with
+either.
 
 ### Translations
 
