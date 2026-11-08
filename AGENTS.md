@@ -43,9 +43,9 @@ SetChargingProfile are rejected on purpose: the API cannot control charging.
 
 ```sh
 pip install -r requirements-dev.txt
-python -m pytest            # 95 unit tests, ~1.5 s, no network
+python -m pytest            # 100 unit tests, ~2 s, no network
 ruff check .
-cd addon/app && python -m tesla_ocpp_bridge     # needs env vars, see README
+cd addon/app && python -m tesla_ocpp_bridge     # needs env vars, see CONTRIBUTING
 python tools/fake_twc.py --port 8081 --speed 30 # simulators for manual runs
 python tools/fake_csms.py --port 9000
 docker build -t tesla-ocpp-bridge:smoke addon && tools/smoke_test.sh  # container e2e, ~10 s
@@ -123,7 +123,7 @@ decision.
   their follow-up messages.
 - Tests use `tests/helpers.Loopback`, an in-memory peer. All frames go
   through the real ocpp schema validation.
-- Monkeypatch `MAX_QUEUED_METER_VALUES` / `TWC_OFFLINE_AFTER_S` on
+- Monkeypatch `MAX_QUEUED_METER_VALUES` / `TWC_OFFLINE_AFTER_S` / `TWC_WARN_AFTER_S` on
   `tesla_ocpp_bridge.bridge`, where they are used.
 
 ## Status / open items

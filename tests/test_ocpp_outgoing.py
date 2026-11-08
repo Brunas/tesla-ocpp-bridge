@@ -6,7 +6,7 @@ import logging
 import pytest
 from ocpp.v16.enums import ReadingContext
 
-from helpers import CALL_ERROR, NO_REPLY, attach, drain, lifetime, vitals
+from helpers import CALL_ERROR, NO_REPLY, attach, drain, incoming, lifetime, vitals, wait_until
 from tesla_ocpp_bridge.state import State
 
 
@@ -169,25 +169,37 @@ def test_boot_interval_does_not_override_csms_configuration(bridge):
     assert bridge.heartbeat_interval == 120
 
 
-def test_boot_pending_waits_and_reports_failure(bridge, monkeypatch):
-    waits = []
-    real_sleep = asyncio.sleep
-
-    async def fake_sleep(seconds):
-        waits.append(seconds)
-        await real_sleep(0)
-
+def test_boot_pending_reports_failure_and_retry_interval(bridge):
     async def scenario():
         cp, _ = attach(bridge, BootNotification={"currentTime": "2026-01-01T00:00:00Z",
                                                  "interval": 17, "status": "Pending"})
-        monkeypatch.setattr(asyncio, "sleep", fake_sleep)
-        try:
-            return await bridge.send_boot(cp)
-        finally:
-            monkeypatch.undo()
+        return await bridge.send_boot(cp)
 
     assert asyncio.run(scenario()) is False
-    assert 17 in waits
+    assert bridge.boot_retry_after == 17
+
+
+def test_boot_pending_then_triggered_boot_accepted_does_not_boot_again(bridge):
+    # CircleLink answers the first boot with Pending, then sends
+    # TriggerMessage(BootNotification) and accepts that one.
+    replies = iter(["Pending", "Accepted", "Accepted"])
+
+    def boot_reply(_payload):
+        return {"currentTime": "2026-01-01T00:00:00Z", "interval": 15, "status": next(replies)}
+
+    async def scenario():
+        cp, conn = attach(bridge, BootNotification=boot_reply)
+        task = asyncio.create_task(bridge.boot(cp))
+        await wait_until(lambda: len(conn.payloads("BootNotification")) == 1)
+        reply = await incoming(cp, conn, "TriggerMessage",
+                               {"requestedMessage": "BootNotification"})
+        assert reply[2] == {"status": "Accepted"}
+        await asyncio.wait_for(task, timeout=2)  # does not sit out the 15 s retry interval
+        return conn
+
+    conn = asyncio.run(scenario())
+    assert conn.actions().count("BootNotification") == 2  # the original and the triggered one
+    assert bridge.boot_accepted.is_set()
 
 
 def test_triggered_meter_values_with_and_without_transaction(bridge):

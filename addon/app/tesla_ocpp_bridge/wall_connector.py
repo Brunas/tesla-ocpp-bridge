@@ -4,6 +4,9 @@ from __future__ import annotations
 
 import aiohttp
 
+# Over weak Wi-Fi the Wall Connector can take several seconds to answer.
+TIMEOUT_S = 10
+
 
 class WallConnector:
     def __init__(self, host: str, session: aiohttp.ClientSession):
@@ -12,6 +15,6 @@ class WallConnector:
 
     async def get(self, endpoint: str) -> dict:
         url = f"{self.base}/api/1/{endpoint}"
-        async with self.session.get(url, timeout=aiohttp.ClientTimeout(total=5)) as resp:
+        async with self.session.get(url, timeout=aiohttp.ClientTimeout(total=TIMEOUT_S)) as resp:
             resp.raise_for_status()
             return await resp.json(content_type=None)

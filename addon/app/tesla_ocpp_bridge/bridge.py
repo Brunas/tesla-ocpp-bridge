@@ -34,6 +34,7 @@ log = logging.getLogger(__name__)
 CONNECTOR_ID = 1
 MAX_QUEUED_METER_VALUES = 500
 TWC_OFFLINE_AFTER_S = 60
+TWC_WARN_AFTER_S = 15  # outages up to this long (one timed-out poll) are logged at debug level
 
 
 def now_iso() -> str:
@@ -59,6 +60,8 @@ class Bridge:
         self.outbox_event = asyncio.Event()
         self.status_event = asyncio.Event()
         self.first_poll = asyncio.Event()
+        self.boot_accepted = asyncio.Event()  # per connection; set by any accepted boot
+        self.boot_retry_after = 60
 
     # ---- configuration exposed via GetConfiguration -------------------------
 
@@ -109,9 +112,13 @@ class Bridge:
     # ---- Wall Connector polling ---------------------------------------------
 
     async def poll_loop(self) -> None:
-        last_ok = asyncio.get_running_loop().time()
+        loop = asyncio.get_running_loop()
+        last_ok = loop.time()
         fail_count = 0
+        down_since = 0.0  # start of the first failed poll of the current outage
+        warned = False
         while True:
+            started = loop.time()
             try:
                 vitals = await self.twc.get("vitals")
                 lifetime = await self.twc.get("lifetime")
@@ -124,17 +131,30 @@ class Bridge:
                         self.version.get("part_number"),
                     )
                 if fail_count:
-                    log.info("Wall Connector reachable again")
+                    log.log(logging.INFO if warned else logging.DEBUG,
+                            "Wall Connector reachable again after %.0fs",
+                            loop.time() - down_since)
                 fail_count = 0
-                last_ok = asyncio.get_running_loop().time()
+                warned = False
+                last_ok = loop.time()
                 self.twc_ok = True
                 self.twc_seen = True
                 self.process(vitals, lifetime)
             except Exception as exc:
                 fail_count += 1
-                if fail_count == 1 or fail_count % 60 == 0:
-                    log.warning("Wall Connector poll failed (%d): %r", fail_count, exc)
-                if asyncio.get_running_loop().time() - last_ok > TWC_OFFLINE_AFTER_S:
+                if fail_count == 1:
+                    down_since = started
+                down = loop.time() - down_since
+                log.debug("Wall Connector poll failed (%d): %r", fail_count, exc)
+                # Wi-Fi blips of a few seconds are common: only warn once it stays down,
+                # but right away if it was never reachable (wrong address?).
+                if (not warned and (down > TWC_WARN_AFTER_S or not self.twc_seen)) or (
+                    warned and fail_count % 60 == 0
+                ):
+                    log.warning("Wall Connector unreachable for %.0fs, %d failed poll(s): %r",
+                                down, fail_count, exc)
+                    warned = True
+                if loop.time() - last_ok > TWC_OFFLINE_AFTER_S:
                     self.twc_ok = False
                     self.update_status()
             self.first_poll.set()
@@ -405,14 +425,28 @@ class Bridge:
             if res.interval and "HeartbeatInterval" not in self.state.config:
                 self.cfg["heartbeat_interval"] = int(res.interval)
             log.info("BootNotification accepted (heartbeat %ss)", self.heartbeat_interval)
+            self.boot_accepted.set()
             return True
-        log.warning("BootNotification %s, retrying in %ss", res.status, res.interval)
-        await asyncio.sleep(res.interval or 60)
+        self.boot_retry_after = res.interval or 60
+        log.warning("BootNotification %s, retrying in %ss", res.status, self.boot_retry_after)
         return False
 
-    async def session(self, cp: BridgeChargePoint) -> None:
+    async def boot(self, cp: BridgeChargePoint) -> None:
+        """Send BootNotification until it is accepted.
+
+        While Pending, the central system may send TriggerMessage(BootNotification).
+        If that triggered boot is accepted, stop waiting instead of booting twice.
+        """
+        self.boot_accepted.clear()
         while not await self.send_boot(cp):
-            pass
+            try:
+                await asyncio.wait_for(self.boot_accepted.wait(), self.boot_retry_after)
+                return
+            except TimeoutError:
+                pass
+
+    async def session(self, cp: BridgeChargePoint) -> None:
+        await self.boot(cp)
         self.cp = cp
         self.last_sent_status = None
         self.status_event.set()
